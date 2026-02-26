@@ -141,8 +141,7 @@
         <div class="panel-content" style="display: flex; flex-direction: column;">
           
           <div class="section-title">Execution Steps</div>
-          <div class="step-list" id="step-list">
-            </div>
+          <div class="step-list" id="step-list"></div>
           <div style="display:flex; gap:5px; margin-bottom:30px;">
             <input type="text" id="step-input" class="input-dark" style="margin:0;" placeholder="Add operational step...">
             <button class="btn-action" style="width:auto; padding:0 15px;" onclick="addStep()"><i class="fas fa-plus"></i></button>
@@ -150,7 +149,6 @@
 
           <div class="section-title">Field Notes & Intel</div>
           <textarea class="input-dark" placeholder="Log enemy movements, specific comms channels, or commander's intent here..."></textarea>
-
         </div>
       </aside>
     </main>
@@ -160,25 +158,36 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
   <script>
-    // 1. Map Initialization (Simple Grid for Arma)
+    // 1. Map Initialization
     const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 3, zoomControl: false });
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // 2. Map Image Overlay (Replace URL when you have the Gogland extraction)
-    const bounds = [[0, 0], [1000, 1000]];
-    L.imageOverlay('https://api.armasites.com/maps/gogland/topographic.jpg', bounds).addTo(map);
-    map.fitBounds(bounds);
+    // 2. Map Image Overlay (Stitching the halves together)
+    // We define the total grid as 1000x1000. 
+    const totalBounds = [[0, 0], [1000, 1000]];
+    
+    // Lower half goes from bottom (0) to middle (500)
+    const lowerBounds = [[0, 0], [500, 1000]];
+    
+    // Upper half goes from middle (500) to top (1000)
+    const upperBounds = [[500, 0], [1000, 1000]];
+
+    // Load the images directly from your GitHub repo using the exact filenames you uploaded
+    L.imageOverlay('Gogland Lower.png', lowerBounds).addTo(map);
+    L.imageOverlay('Gogland Upper.png', upperBounds).addTo(map);
+
+    // Snap the camera to the full stitched map
+    map.fitBounds(totalBounds);
 
     // 3. Tactical Drawing Layer
     const drawnItems = new L.FeatureGroup().addTo(map);
 
-    // Leaflet Draw Control (Left side of map)
     new L.Control.Draw({
       position: 'topleft',
       edit: { featureGroup: drawnItems },
       draw: {
         circle: false,
-        marker: false, // We use custom deployment buttons instead
+        marker: false, 
         polyline: { shapeOptions: { color: 'var(--mil-gold)', weight: 3, opacity: 0.8 } },
         polygon: { shapeOptions: { color: 'var(--mil-gold)', fillOpacity: 0.2, weight: 2 } },
         rectangle: { shapeOptions: { color: 'var(--mil-red)', fillOpacity: 0.1, weight: 2 } }
@@ -187,7 +196,7 @@
 
     map.on(L.Draw.Event.CREATED, (e) => drawnItems.addLayer(e.layer));
 
-    // 4. Custom Unit Spawner (Using precise Military styling)
+    // 4. Custom Unit Spawner
     function spawnUnit(type, side) {
       const color = (side === 'blue') ? 'var(--mil-blue)' : 'var(--mil-red)';
       const bg = (side === 'blue') ? 'rgba(74, 122, 181, 0.2)' : 'rgba(139, 46, 46, 0.2)';
@@ -202,8 +211,6 @@
       
       const marker = L.marker(map.getCenter(), {icon: icon, draggable: true}).addTo(drawnItems);
       marker.bindPopup(`<b style="font-family:'Quantico'; text-transform:uppercase;">${side} ${type}</b><br>Drag to move. Right-click to remove.`);
-      
-      // Right click to delete unit
       marker.on('contextmenu', function() { drawnItems.removeLayer(marker); });
     }
 
@@ -230,7 +237,6 @@
       input.value = "";
     }
 
-    // Hit enter to add step
     document.getElementById('step-input').addEventListener('keypress', function (e) {
       if (e.key === 'Enter') addStep();
     });
