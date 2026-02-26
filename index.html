@@ -3,158 +3,244 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Regiment War Room | Tactical Interface</title>
+  <title>Regiment War Room | C2 Dashboard</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Quantico:wght@700&family=Saira+Condensed:wght@400;700&display=swap" rel="stylesheet">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Quantico:wght@400;700&family=Saira+Condensed:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
   <style>
-    :root { --mil-green: #1a3a1f; --mil-gold: #c6a84c; --mil-red: #8b2e2e; --mil-blue: #2e5b8b; --dark: #070f08; }
-    body, html { margin: 0; padding: 0; height: 100%; background: var(--dark); font-family: 'Saira Condensed', sans-serif; color: #e0e0e0; overflow: hidden; }
-    
-    /* Header */
-    .topbar { height: 50px; background: var(--mil-green); border-bottom: 2px solid var(--mil-gold); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 2000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-    .brand { font-family: 'Quantico'; color: var(--mil-gold); letter-spacing: 2px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+    :root {
+      --bg-base: #030704;
+      --panel-bg: #0a160c;
+      --panel-border: #1e3822;
+      --mil-gold: #c6a84c;
+      --mil-gold-dim: rgba(198, 168, 76, 0.15);
+      --mil-red: #8b2e2e;
+      --mil-blue: #4a7ab5;
+      --text-main: #e0e0e0;
+      --text-muted: #889988;
+    }
 
-    /* Layout */
-    .main-layout { display: flex; height: calc(100vh - 50px); }
-    
-    /* Tactical Sidebar */
-    .sidebar { width: 320px; background: rgba(10, 26, 13, 0.95); border-right: 1px solid var(--mil-gold); display: flex; flex-direction: column; }
-    .tabs { display: flex; background: #000; border-bottom: 1px solid var(--mil-gold); }
-    .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: #888; cursor: pointer; font-family: 'Quantico'; font-size: 11px; }
-    .tab-btn.active { color: var(--mil-gold); border-bottom: 2px solid var(--mil-gold); background: rgba(198, 168, 76, 0.1); }
-    
-    .panel { padding: 15px; display: none; flex-grow: 1; overflow-y: auto; }
-    .panel.active { display: block; }
+    * { box-sizing: border-box; }
+    body, html { margin: 0; padding: 0; width: 100%; height: 100vh; background: var(--bg-base); font-family: 'Saira Condensed', sans-serif; color: var(--text-main); overflow: hidden; }
 
-    /* Asset Buttons */
-    .asset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .asset-item { background: rgba(255,255,255,0.05); border: 1px solid #333; padding: 10px; cursor: pointer; text-align: center; border-radius: 4px; transition: 0.2s; }
-    .asset-item:hover { border-color: var(--mil-gold); background: rgba(198, 168, 76, 0.1); }
-    .asset-item i { font-size: 1.4rem; display: block; margin-bottom: 5px; }
+    /* Dashboard Layout */
+    .dashboard { display: flex; flex-direction: column; height: 100vh; }
+    
+    /* Top Navigation Bar */
+    .topbar {
+      height: 55px; background: var(--panel-bg); border-bottom: 1px solid var(--panel-border);
+      display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 2000;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; font-family: 'Quantico', sans-serif; font-size: 18px; color: var(--mil-gold); letter-spacing: 2px; }
+    .brand i { font-size: 24px; color: var(--text-main); }
+    .sys-status { font-family: 'Quantico', monospace; font-size: 12px; color: #4ade80; display: flex; align-items: center; gap: 8px; }
+    .sys-status .pulse { width: 8px; height: 8px; background: #4ade80; border-radius: 50%; animation: blink 2s infinite; }
 
-    /* Note Area */
-    textarea { width: 100%; height: 150px; background: #000; border: 1px solid var(--mil-green); color: var(--mil-gold); padding: 10px; font-family: monospace; resize: none; margin-top: 10px; }
+    /* Workspace */
+    .workspace { display: flex; flex: 1; overflow: hidden; }
+
+    /* Side Panels */
+    .panel { width: 300px; background: var(--panel-bg); display: flex; flex-direction: column; z-index: 1000; }
+    .panel-left { border-right: 1px solid var(--panel-border); }
+    .panel-right { border-left: 1px solid var(--panel-border); }
     
-    #map { flex-grow: 1; background: #050d06; }
+    .panel-header { padding: 15px 20px; border-bottom: 1px solid var(--panel-border); font-family: 'Quantico', sans-serif; font-size: 14px; color: var(--mil-gold); text-transform: uppercase; letter-spacing: 1px; background: rgba(0,0,0,0.2); }
+    .panel-content { padding: 20px; overflow-y: auto; flex: 1; }
+
+    /* UI Elements */
+    .section-title { font-size: 12px; color: var(--text-muted); font-family: 'Quantico', sans-serif; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
     
-    /* HUD Overlays */
-    .hud-coords { position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); border: 1px solid var(--mil-gold); padding: 5px 15px; font-family: 'Quantico'; color: var(--mil-gold); pointer-events: none; z-index: 1000; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
+    
+    .btn-tactical {
+      background: rgba(0,0,0,0.4); border: 1px solid var(--panel-border); color: var(--text-main);
+      padding: 12px 10px; cursor: pointer; text-align: center; border-radius: 2px;
+      font-family: 'Quantico', sans-serif; font-size: 11px; transition: all 0.2s;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-tactical i { font-size: 18px; }
+    .btn-tactical:hover { border-color: var(--mil-gold); background: var(--mil-gold-dim); color: var(--mil-gold); }
+
+    .btn-action { width: 100%; background: transparent; border: 1px solid var(--mil-gold); color: var(--mil-gold); padding: 10px; font-family: 'Quantico', sans-serif; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
+    .btn-action:hover { background: var(--mil-gold); color: var(--bg-base); }
+    .btn-danger { border-color: var(--mil-red); color: var(--mil-red); margin-top: auto; }
+    .btn-danger:hover { background: var(--mil-red); color: white; }
+
+    /* Inputs & Notes */
+    .input-dark { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border); border-bottom: 2px solid var(--mil-gold); color: var(--text-main); padding: 10px; font-family: 'Saira Condensed', sans-serif; font-size: 14px; margin-bottom: 10px; outline: none; transition: 0.3s; }
+    .input-dark:focus { background: rgba(0,0,0,0.6); border-bottom-color: #fff; }
+    
+    textarea.input-dark { height: 200px; resize: none; border-bottom: 1px solid var(--panel-border); border-left: 2px solid var(--mil-gold); }
+
+    .step-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .step-item { background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); padding: 10px; font-size: 14px; display: flex; gap: 10px; }
+    .step-number { color: var(--mil-gold); font-family: 'Quantico', sans-serif; font-weight: bold; }
+
+    /* Map Area */
+    .map-container { flex: 1; position: relative; background: #000; }
+    #map { width: 100%; height: 100%; background: #050a06; }
+
+    /* HUD Elements */
+    .hud-overlay { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(10, 22, 12, 0.85); border: 1px solid var(--mil-gold); padding: 5px 20px; font-family: 'Quantico', monospace; color: var(--mil-gold); z-index: 1000; pointer-events: none; border-radius: 2px; box-shadow: 0 0 10px rgba(198, 168, 76, 0.1); }
+
+    @keyframes blink { 0%, 100% {opacity: 1;} 50% {opacity: 0.3;} }
   </style>
 </head>
 <body>
 
-  <header class="topbar">
-    <div class="brand"><i class="fas fa-crosshairs"></i> REGIMENT WAR ROOM</div>
-    <div style="font-family: 'Quantico'; font-size: 12px; opacity: 0.7;">TACTICAL DATA LINK ACTIVE</div>
-  </header>
-
-  <div class="main-layout">
-    <aside class="sidebar">
-      <div class="tabs">
-        <button class="tab-btn active" onclick="showTab('assets')">ASSETS</button>
-        <button class="tab-btn" onclick="showTab('mission')">MISSION</button>
-        <button class="tab-btn" onclick="showTab('intel')">INTEL</button>
+  <div class="dashboard">
+    <header class="topbar">
+      <div class="brand">
+        <i class="fas fa-shield-halved"></i> 
+        <span>THE REGIMENT <span style="color:var(--text-main); font-weight:400;">| C2 DASHBOARD</span></span>
       </div>
+      <div class="sys-status">
+        <div class="pulse"></div> UPLINK SECURE — AO: GOGLAND
+      </div>
+    </header>
 
-      <div id="assets" class="panel active">
-        <h4 style="color:var(--mil-gold); margin-top:0;">BLUFOR UNITS</h4>
-        <div class="asset-grid">
-          <div class="asset-item" onclick="spawn('inf', 'blue')"><i class="fas fa-rectangle-xmark" style="color:var(--mil-blue)"></i> INFANTRY</div>
-          <div class="asset-item" onclick="spawn('arm', 'blue')"><i class="fas fa-circle-dot" style="color:var(--mil-blue)"></i> ARMOR</div>
-          <div class="asset-item" onclick="spawn('air', 'blue')"><i class="fas fa-plane-up" style="color:var(--mil-blue)"></i> AIR</div>
-          <div class="asset-item" onclick="spawn('sea', 'blue')"><i class="fas fa-ship" style="color:var(--mil-blue)"></i> NAVAL</div>
+    <main class="workspace">
+      <aside class="panel panel-left">
+        <div class="panel-header"><i class="fas fa-layer-group"></i> Deployment Assets</div>
+        <div class="panel-content">
+          
+          <div class="section-title">BLUFOR (Friendly)</div>
+          <div class="grid-2">
+            <button class="btn-tactical" onclick="spawnUnit('inf', 'blue')"><i class="fas fa-users" style="color:var(--mil-blue)"></i> INFANTRY</button>
+            <button class="btn-tactical" onclick="spawnUnit('arm', 'blue')"><i class="fas fa-tank-water" style="color:var(--mil-blue)"></i> ARMOR</button>
+            <button class="btn-tactical" onclick="spawnUnit('air', 'blue')"><i class="fas fa-helicopter" style="color:var(--mil-blue)"></i> AIR</button>
+            <button class="btn-tactical" onclick="spawnUnit('sea', 'blue')"><i class="fas fa-ship" style="color:var(--mil-blue)"></i> NAVAL</button>
+          </div>
+
+          <div class="section-title">OPFOR (Hostile)</div>
+          <div class="grid-2">
+            <button class="btn-tactical" onclick="spawnUnit('inf', 'red')"><i class="fas fa-users" style="color:var(--mil-red)"></i> INFANTRY</button>
+            <button class="btn-tactical" onclick="spawnUnit('arm', 'red')"><i class="fas fa-tank-water" style="color:var(--mil-red)"></i> ARMOR</button>
+          </div>
+
+          <div class="section-title" style="margin-top: 20px;">Draw Tools</div>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 20px;">Use the toolbar on the left side of the map to draw perimeters, routes, and tactical markers.</p>
+
+          <div style="flex-grow: 1;"></div>
+          <button class="btn-action btn-danger" onclick="clearMap()"><i class="fas fa-trash-can"></i> WIPE MISSION DATA</button>
         </div>
-        <h4 style="color:var(--mil-red); margin-top:20px;">OPFOR UNITS</h4>
-        <div class="asset-grid">
-          <div class="asset-item" onclick="spawn('inf', 'red')"><i class="fas fa-rectangle-xmark" style="color:var(--mil-red)"></i> INFANTRY</div>
-          <div class="asset-item" onclick="spawn('arm', 'red')"><i class="fas fa-circle-dot" style="color:var(--mil-red)"></i> ARMOR</div>
+      </aside>
+
+      <section class="map-container">
+        <div id="map"></div>
+        <div class="hud-overlay" id="coords">GRID REF: 0000 / 0000</div>
+      </section>
+
+      <aside class="panel panel-right">
+        <div class="panel-header"><i class="fas fa-clipboard-list"></i> Mission Ledger</div>
+        <div class="panel-content" style="display: flex; flex-direction: column;">
+          
+          <div class="section-title">Execution Steps</div>
+          <div class="step-list" id="step-list">
+            </div>
+          <div style="display:flex; gap:5px; margin-bottom:30px;">
+            <input type="text" id="step-input" class="input-dark" style="margin:0;" placeholder="Add operational step...">
+            <button class="btn-action" style="width:auto; padding:0 15px;" onclick="addStep()"><i class="fas fa-plus"></i></button>
+          </div>
+
+          <div class="section-title">Field Notes & Intel</div>
+          <textarea class="input-dark" placeholder="Log enemy movements, specific comms channels, or commander's intent here..."></textarea>
+
         </div>
-      </div>
-
-      <div id="mission" class="panel">
-        <h4 style="color:var(--mil-gold); margin-top:0;">OPERATIONAL STEPS</h4>
-        <div id="step-list"></div>
-        <input type="text" id="step-input" placeholder="New Step..." style="width:100%; background:#111; border:1px solid #444; color:white; padding:8px;">
-        <button onclick="addStep()" style="width:100%; margin-top:5px; background:var(--mil-green); color:var(--mil-gold); border:none; padding:5px; cursor:pointer;">+ ADD STEP</button>
-      </div>
-
-      <div id="intel" class="panel">
-        <h4 style="color:var(--mil-gold); margin-top:0;">SITUATION REPORT</h4>
-        <textarea id="notes" placeholder="Enter tactical notes here..."></textarea>
-        <button onclick="saveIntel()" style="width:100%; margin-top:10px; background:var(--mil-gold); color:var(--dark); border:none; padding:10px; font-weight:bold; cursor:pointer;">SAVE INTEL</button>
-      </div>
-    </aside>
-
-    <div id="map"></div>
-    <div class="hud-coords" id="coords">GRID: 0000 / 0000</div>
+      </aside>
+    </main>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
   <script>
-    // 1. MAP SETUP
+    // 1. Map Initialization (Simple Grid for Arma)
     const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 3, zoomControl: false });
     L.control.zoom({ position: 'topright' }).addTo(map);
 
+    // 2. Map Image Overlay (Replace URL when you have the Gogland extraction)
     const bounds = [[0, 0], [1000, 1000]];
-    // Placeholder using a generic topographic tile system similar to recoil.org
     L.imageOverlay('https://api.armasites.com/maps/gogland/topographic.jpg', bounds).addTo(map);
     map.fitBounds(bounds);
 
+    // 3. Tactical Drawing Layer
     const drawnItems = new L.FeatureGroup().addTo(map);
 
-    // 2. SPAWN NATO SYMBOLS
-    function spawn(type, side) {
-      const color = (side === 'blue') ? '#2e5b8b' : '#8b2e2e';
-      const symbols = { 'inf': 'X', 'arm': 'O', 'air': 'A', 'sea': 'S' };
-      
-      const icon = L.divIcon({
-        className: 'nato-icon',
-        html: `<div style="border:2px solid ${color}; background:rgba(0,0,0,0.6); width:32px; height:24px; display:flex; align-items:center; justify-content:center; color:${color}; font-weight:bold; font-family:sans-serif; font-size:12px;">${symbols[type]}</div>`,
-        iconSize: [32, 24]
-      });
-      L.marker(map.getCenter(), {icon: icon, draggable: true}).addTo(drawnItems);
-    }
-
-    // 3. UI LOGIC
-    function showTab(tabId) {
-      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      event.target.classList.add('active');
-    }
-
-    function addStep() {
-      const input = document.getElementById('step-input');
-      if (!input.value) return;
-      const list = document.getElementById('step-list');
-      const div = document.createElement('div');
-      div.style = "padding:8px; background:rgba(255,255,255,0.05); margin-bottom:5px; font-size:13px; border-left:3px solid var(--mil-gold);";
-      div.innerHTML = `<b>STEP ${list.children.length + 1}:</b> ${input.value}`;
-      list.appendChild(div);
-      input.value = "";
-    }
-
-    // 4. COORDINATES
-    map.on('mousemove', (e) => {
-      let x = Math.round(e.latlng.lng).toString().padStart(4, '0');
-      let y = Math.round(e.latlng.lat).toString().padStart(4, '0');
-      document.getElementById('coords').innerHTML = `GRID: ${x} / ${y}`;
-    });
-
-    // 5. DRAWING TOOLS (Arrows/Routes)
+    // Leaflet Draw Control (Left side of map)
     new L.Control.Draw({
+      position: 'topleft',
       edit: { featureGroup: drawnItems },
-      draw: { circle: false, polyline: { shapeOptions: { color: 'var(--mil-gold)' } }, polygon: { shapeOptions: { color: 'var(--mil-gold)', fillOpacity: 0.1 } } }
+      draw: {
+        circle: false,
+        marker: false, // We use custom deployment buttons instead
+        polyline: { shapeOptions: { color: 'var(--mil-gold)', weight: 3, opacity: 0.8 } },
+        polygon: { shapeOptions: { color: 'var(--mil-gold)', fillOpacity: 0.2, weight: 2 } },
+        rectangle: { shapeOptions: { color: 'var(--mil-red)', fillOpacity: 0.1, weight: 2 } }
+      }
     }).addTo(map);
 
     map.on(L.Draw.Event.CREATED, (e) => drawnItems.addLayer(e.layer));
 
+    // 4. Custom Unit Spawner (Using precise Military styling)
+    function spawnUnit(type, side) {
+      const color = (side === 'blue') ? 'var(--mil-blue)' : 'var(--mil-red)';
+      const bg = (side === 'blue') ? 'rgba(74, 122, 181, 0.2)' : 'rgba(139, 46, 46, 0.2)';
+      const symbols = { 'inf': 'X', 'arm': 'O', 'air': 'A', 'sea': 'S' };
+      
+      const icon = L.divIcon({
+        className: 'custom-nato',
+        html: `<div style="border: 2px solid ${color}; background: ${bg}; backdrop-filter: blur(2px); width: 36px; height: 26px; display: flex; align-items: center; justify-content: center; color: ${color}; font-weight: bold; font-family: 'Quantico', sans-serif; font-size: 14px; box-shadow: 0 0 8px rgba(0,0,0,0.8);">${symbols[type]}</div>`,
+        iconSize: [36, 26],
+        iconAnchor: [18, 13]
+      });
+      
+      const marker = L.marker(map.getCenter(), {icon: icon, draggable: true}).addTo(drawnItems);
+      marker.bindPopup(`<b style="font-family:'Quantico'; text-transform:uppercase;">${side} ${type}</b><br>Drag to move. Right-click to remove.`);
+      
+      // Right click to delete unit
+      marker.on('contextmenu', function() { drawnItems.removeLayer(marker); });
+    }
+
+    // 5. Grid Coordinate Tracker
+    map.on('mousemove', (e) => {
+      let x = Math.max(0, Math.round(e.latlng.lng)).toString().padStart(4, '0');
+      let y = Math.max(0, Math.round(e.latlng.lat)).toString().padStart(4, '0');
+      document.getElementById('coords').innerHTML = `GRID REF: ${x} / ${y}`;
+    });
+
+    // 6. UI Functions
+    function addStep() {
+      const input = document.getElementById('step-input');
+      if (!input.value.trim()) return;
+      
+      const list = document.getElementById('step-list');
+      const stepNum = list.children.length + 1;
+      
+      const div = document.createElement('div');
+      div.className = 'step-item';
+      div.innerHTML = `<div class="step-number">0${stepNum}</div><div>${input.value}</div>`;
+      
+      list.appendChild(div);
+      input.value = "";
+    }
+
+    // Hit enter to add step
+    document.getElementById('step-input').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') addStep();
+    });
+
+    function clearMap() {
+      if(confirm("CRITICAL WARNING: This will purge all tactical layers and unit markers. Proceed?")) {
+        drawnItems.clearLayers();
+        document.getElementById('step-list').innerHTML = '';
+      }
+    }
   </script>
 </body>
 </html>
