@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Regiment War Room | Gogland AO</title>
+  <title>Regiment War Room | Tactical Interface</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
@@ -11,91 +11,150 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
   <style>
-    :root { --mil-green: #1a3a1f; --mil-gold: #c6a84c; --mil-red: #8b2e2e; --mil-blue: #2e5b8b; --dark: #0a1a0d; }
-    body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--dark); font-family: 'Saira Condensed', sans-serif; color: #e0e0e0; overflow: hidden; }
+    :root { --mil-green: #1a3a1f; --mil-gold: #c6a84c; --mil-red: #8b2e2e; --mil-blue: #2e5b8b; --dark: #070f08; }
+    body, html { margin: 0; padding: 0; height: 100%; background: var(--dark); font-family: 'Saira Condensed', sans-serif; color: #e0e0e0; overflow: hidden; }
     
-    .topbar {
-      height: 60px; background: var(--mil-green); border-bottom: 2px solid var(--mil-gold);
-      display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 2000;
-    }
-    .regiment-brand { display: flex; align-items: center; gap: 15px; font-family: 'Quantico'; color: var(--mil-gold); letter-spacing: 1px; }
-    
-    .main-layout { display: flex; height: calc(100vh - 60px); }
-    .sidebar { width: 280px; background: rgba(26, 58, 31, 0.95); border-right: 1px solid var(--mil-gold); padding: 20px; overflow-y: auto; }
-    #map { flex-grow: 1; background: #050d06; }
+    /* Header */
+    .topbar { height: 50px; background: var(--mil-green); border-bottom: 2px solid var(--mil-gold); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 2000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    .brand { font-family: 'Quantico'; color: var(--mil-gold); letter-spacing: 2px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
 
-    .tool-section { margin-bottom: 25px; }
-    .tool-section h3 { font-family: 'Quantico'; font-size: 14px; color: var(--mil-gold); border-bottom: 1px solid var(--mil-gold); padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase; }
+    /* Layout */
+    .main-layout { display: flex; height: calc(100vh - 50px); }
     
-    .symbol-btn { 
-      width: 100%; background: rgba(0,0,0,0.3); border: 1px solid #444; color: white; 
-      padding: 12px; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px;
-      font-family: 'Quantico'; font-size: 12px; transition: 0.2s;
-    }
-    .symbol-btn:hover { border-color: var(--mil-gold); background: rgba(198, 168, 76, 0.1); }
+    /* Tactical Sidebar */
+    .sidebar { width: 320px; background: rgba(10, 26, 13, 0.95); border-right: 1px solid var(--mil-gold); display: flex; flex-direction: column; }
+    .tabs { display: flex; background: #000; border-bottom: 1px solid var(--mil-gold); }
+    .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: #888; cursor: pointer; font-family: 'Quantico'; font-size: 11px; }
+    .tab-btn.active { color: var(--mil-gold); border-bottom: 2px solid var(--mil-gold); background: rgba(198, 168, 76, 0.1); }
+    
+    .panel { padding: 15px; display: none; flex-grow: 1; overflow-y: auto; }
+    .panel.active { display: block; }
+
+    /* Asset Buttons */
+    .asset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .asset-item { background: rgba(255,255,255,0.05); border: 1px solid #333; padding: 10px; cursor: pointer; text-align: center; border-radius: 4px; transition: 0.2s; }
+    .asset-item:hover { border-color: var(--mil-gold); background: rgba(198, 168, 76, 0.1); }
+    .asset-item i { font-size: 1.4rem; display: block; margin-bottom: 5px; }
+
+    /* Note Area */
+    textarea { width: 100%; height: 150px; background: #000; border: 1px solid var(--mil-green); color: var(--mil-gold); padding: 10px; font-family: monospace; resize: none; margin-top: 10px; }
+    
+    #map { flex-grow: 1; background: #050d06; }
+    
+    /* HUD Overlays */
+    .hud-coords { position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); border: 1px solid var(--mil-gold); padding: 5px 15px; font-family: 'Quantico'; color: var(--mil-gold); pointer-events: none; z-index: 1000; }
   </style>
 </head>
 <body>
 
   <header class="topbar">
-    <div class="regiment-brand">
-      <i class="fas fa-skull-crossbones fa-lg"></i>
-      <span>THE REGIMENT | MISSION EDITOR</span>
-    </div>
-    <div style="font-family:'Quantico'; font-size: 12px; color: var(--mil-gold);">AO: GOGLAND TACTICAL</div>
+    <div class="brand"><i class="fas fa-crosshairs"></i> REGIMENT WAR ROOM</div>
+    <div style="font-family: 'Quantico'; font-size: 12px; opacity: 0.7;">TACTICAL DATA LINK ACTIVE</div>
   </header>
 
   <div class="main-layout">
     <aside class="sidebar">
-      <div class="tool-section">
-        <h3>Deployment Assets</h3>
-        <button class="symbol-btn" onclick="spawnUnit('infantry', 'blue')"><i class="fas fa-square-xmark" style="color:var(--mil-blue)"></i> BLUFOR INFANTRY</button>
-        <button class="symbol-btn" onclick="spawnUnit('armor', 'blue')"><i class="fas fa-vector-square" style="color:var(--mil-blue)"></i> BLUFOR ARMOR</button>
-        <button class="symbol-btn" onclick="spawnUnit('infantry', 'red')"><i class="fas fa-square-xmark" style="color:var(--mil-red)"></i> OPFOR INFANTRY</button>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('assets')">ASSETS</button>
+        <button class="tab-btn" onclick="showTab('mission')">MISSION</button>
+        <button class="tab-btn" onclick="showTab('intel')">INTEL</button>
       </div>
 
-      <div class="tool-section">
-        <h3>Regiment Markers</h3>
-        <button class="symbol-btn" onclick="spawnUnit('hq', 'gold')"><i class="fas fa-shield-halved" style="color:var(--mil-gold)"></i> REGIMENT HQ / RP</button>
+      <div id="assets" class="panel active">
+        <h4 style="color:var(--mil-gold); margin-top:0;">BLUFOR UNITS</h4>
+        <div class="asset-grid">
+          <div class="asset-item" onclick="spawn('inf', 'blue')"><i class="fas fa-rectangle-xmark" style="color:var(--mil-blue)"></i> INFANTRY</div>
+          <div class="asset-item" onclick="spawn('arm', 'blue')"><i class="fas fa-circle-dot" style="color:var(--mil-blue)"></i> ARMOR</div>
+          <div class="asset-item" onclick="spawn('air', 'blue')"><i class="fas fa-plane-up" style="color:var(--mil-blue)"></i> AIR</div>
+          <div class="asset-item" onclick="spawn('sea', 'blue')"><i class="fas fa-ship" style="color:var(--mil-blue)"></i> NAVAL</div>
+        </div>
+        <h4 style="color:var(--mil-red); margin-top:20px;">OPFOR UNITS</h4>
+        <div class="asset-grid">
+          <div class="asset-item" onclick="spawn('inf', 'red')"><i class="fas fa-rectangle-xmark" style="color:var(--mil-red)"></i> INFANTRY</div>
+          <div class="asset-item" onclick="spawn('arm', 'red')"><i class="fas fa-circle-dot" style="color:var(--mil-red)"></i> ARMOR</div>
+        </div>
       </div>
 
-      <button onclick="clearMap()" style="width:100%; background:var(--mil-red); color:white; border:none; padding:12px; font-family:'Quantico'; cursor:pointer; margin-top:20px;">WIPE DATA</button>
+      <div id="mission" class="panel">
+        <h4 style="color:var(--mil-gold); margin-top:0;">OPERATIONAL STEPS</h4>
+        <div id="step-list"></div>
+        <input type="text" id="step-input" placeholder="New Step..." style="width:100%; background:#111; border:1px solid #444; color:white; padding:8px;">
+        <button onclick="addStep()" style="width:100%; margin-top:5px; background:var(--mil-green); color:var(--mil-gold); border:none; padding:5px; cursor:pointer;">+ ADD STEP</button>
+      </div>
+
+      <div id="intel" class="panel">
+        <h4 style="color:var(--mil-gold); margin-top:0;">SITUATION REPORT</h4>
+        <textarea id="notes" placeholder="Enter tactical notes here..."></textarea>
+        <button onclick="saveIntel()" style="width:100%; margin-top:10px; background:var(--mil-gold); color:var(--dark); border:none; padding:10px; font-weight:bold; cursor:pointer;">SAVE INTEL</button>
+      </div>
     </aside>
 
     <div id="map"></div>
+    <div class="hud-coords" id="coords">GRID: 0000 / 0000</div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
   <script>
+    // 1. MAP SETUP
     const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 3, zoomControl: false });
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // Grid Bounds
-    const goglandBounds = [[0, 0], [1000, 1000]];
-    
-    // Placeholder image - once the team gives you the file, replace this URL
-    L.imageOverlay('https://api.armasites.com/maps/gogland/topographic.jpg', goglandBounds).addTo(map);
-    map.fitBounds(goglandBounds);
+    const bounds = [[0, 0], [1000, 1000]];
+    // Placeholder using a generic topographic tile system similar to recoil.org
+    L.imageOverlay('https://api.armasites.com/maps/gogland/topographic.jpg', bounds).addTo(map);
+    map.fitBounds(bounds);
 
     const drawnItems = new L.FeatureGroup().addTo(map);
 
-    function spawnUnit(type, side) {
-      let color = (side === 'blue') ? '#2e5b8b' : (side === 'red') ? '#8b2e2e' : '#c6a84c';
-      let symbol = (type === 'infantry') ? 'X' : (type === 'armor') ? '○' : '★';
+    // 2. SPAWN NATO SYMBOLS
+    function spawn(type, side) {
+      const color = (side === 'blue') ? '#2e5b8b' : '#8b2e2e';
+      const symbols = { 'inf': 'X', 'arm': 'O', 'air': 'A', 'sea': 'S' };
       
       const icon = L.divIcon({
-        className: 'custom-icon',
-        html: `<div style="border:2px solid ${color}; background:rgba(0,0,0,0.6); width:34px; height:24px; display:flex; align-items:center; justify-content:center; color:${color}; font-weight:bold; font-size:16px;">${symbol}</div>`,
-        iconSize: [34, 24]
+        className: 'nato-icon',
+        html: `<div style="border:2px solid ${color}; background:rgba(0,0,0,0.6); width:32px; height:24px; display:flex; align-items:center; justify-content:center; color:${color}; font-weight:bold; font-family:sans-serif; font-size:12px;">${symbols[type]}</div>`,
+        iconSize: [32, 24]
       });
-      
-      const marker = L.marker(map.getCenter(), {icon: icon, draggable: true}).addTo(drawnItems);
-      marker.bindPopup(`<b>${type.toUpperCase()}</b><br>Drag to reposition.`);
+      L.marker(map.getCenter(), {icon: icon, draggable: true}).addTo(drawnItems);
     }
 
-    function clearMap() { if(confirm("Confirm: Clear AO data?")) drawnItems.clearLayers(); }
+    // 3. UI LOGIC
+    function showTab(tabId) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    function addStep() {
+      const input = document.getElementById('step-input');
+      if (!input.value) return;
+      const list = document.getElementById('step-list');
+      const div = document.createElement('div');
+      div.style = "padding:8px; background:rgba(255,255,255,0.05); margin-bottom:5px; font-size:13px; border-left:3px solid var(--mil-gold);";
+      div.innerHTML = `<b>STEP ${list.children.length + 1}:</b> ${input.value}`;
+      list.appendChild(div);
+      input.value = "";
+    }
+
+    // 4. COORDINATES
+    map.on('mousemove', (e) => {
+      let x = Math.round(e.latlng.lng).toString().padStart(4, '0');
+      let y = Math.round(e.latlng.lat).toString().padStart(4, '0');
+      document.getElementById('coords').innerHTML = `GRID: ${x} / ${y}`;
+    });
+
+    // 5. DRAWING TOOLS (Arrows/Routes)
+    new L.Control.Draw({
+      edit: { featureGroup: drawnItems },
+      draw: { circle: false, polyline: { shapeOptions: { color: 'var(--mil-gold)' } }, polygon: { shapeOptions: { color: 'var(--mil-gold)', fillOpacity: 0.1 } } }
+    }).addTo(map);
+
+    map.on(L.Draw.Event.CREATED, (e) => drawnItems.addLayer(e.layer));
+
   </script>
 </body>
 </html>
