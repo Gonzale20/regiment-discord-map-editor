@@ -3,122 +3,99 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Regiment War Room</title>
+  <title>Regiment War Room | Gogland AO</title>
 
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Quantico:wght@700&family=Saira+Condensed:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background: #0a1a0d;
-      font-family: Arial, sans-serif;
-    }
-    #map {
-      width: 100%;
-      height: calc(100vh - 50px);
-      border: 2px solid #2a5a2f;
-    }
+    :root { --mil-green: #1a3a1f; --mil-gold: #c6a84c; --mil-red: #8b2e2e; --mil-blue: #2e5b8b; --dark: #0a1a0d; }
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--dark); font-family: 'Saira Condensed', sans-serif; color: #e0e0e0; overflow: hidden; }
+    
     .topbar {
-      height: 50px;
-      background: #1a3a1f;
-      color: #c6a84c;
-      display: flex;
-      align-items: center;
-      padding: 0 15px;
-      font-size: 18px;
-      font-weight: bold;
-      letter-spacing: 1px;
+      height: 60px; background: var(--mil-green); border-bottom: 2px solid var(--mil-gold);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 2000;
     }
-    .leaflet-control {
-      font-size: 14px;
+    .regiment-brand { display: flex; align-items: center; gap: 15px; font-family: 'Quantico'; color: var(--mil-gold); letter-spacing: 1px; }
+    
+    .main-layout { display: flex; height: calc(100vh - 60px); }
+    .sidebar { width: 280px; background: rgba(26, 58, 31, 0.95); border-right: 1px solid var(--mil-gold); padding: 20px; overflow-y: auto; }
+    #map { flex-grow: 1; background: #050d06; }
+
+    .tool-section { margin-bottom: 25px; }
+    .tool-section h3 { font-family: 'Quantico'; font-size: 14px; color: var(--mil-gold); border-bottom: 1px solid var(--mil-gold); padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase; }
+    
+    .symbol-btn { 
+      width: 100%; background: rgba(0,0,0,0.3); border: 1px solid #444; color: white; 
+      padding: 12px; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+      font-family: 'Quantico'; font-size: 12px; transition: 0.2s;
     }
+    .symbol-btn:hover { border-color: var(--mil-gold); background: rgba(198, 168, 76, 0.1); }
   </style>
 </head>
 <body>
 
-  <div class="topbar">REGIMENT WAR ROOM — Interactive Tactical Map</div>
-  <div id="map"></div>
+  <header class="topbar">
+    <div class="regiment-brand">
+      <i class="fas fa-skull-crossbones fa-lg"></i>
+      <span>THE REGIMENT | MISSION EDITOR</span>
+    </div>
+    <div style="font-family:'Quantico'; font-size: 12px; color: var(--mil-gold);">AO: GOGLAND TACTICAL</div>
+  </header>
 
-  <!-- Leaflet JS -->
+  <div class="main-layout">
+    <aside class="sidebar">
+      <div class="tool-section">
+        <h3>Deployment Assets</h3>
+        <button class="symbol-btn" onclick="spawnUnit('infantry', 'blue')"><i class="fas fa-square-xmark" style="color:var(--mil-blue)"></i> BLUFOR INFANTRY</button>
+        <button class="symbol-btn" onclick="spawnUnit('armor', 'blue')"><i class="fas fa-vector-square" style="color:var(--mil-blue)"></i> BLUFOR ARMOR</button>
+        <button class="symbol-btn" onclick="spawnUnit('infantry', 'red')"><i class="fas fa-square-xmark" style="color:var(--mil-red)"></i> OPFOR INFANTRY</button>
+      </div>
+
+      <div class="tool-section">
+        <h3>Regiment Markers</h3>
+        <button class="symbol-btn" onclick="spawnUnit('hq', 'gold')"><i class="fas fa-shield-halved" style="color:var(--mil-gold)"></i> REGIMENT HQ / RP</button>
+      </div>
+
+      <button onclick="clearMap()" style="width:100%; background:var(--mil-red); color:white; border:none; padding:12px; font-family:'Quantico'; cursor:pointer; margin-top:20px;">WIPE DATA</button>
+    </aside>
+
+    <div id="map"></div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Leaflet Draw Plugin (for drawing markers/lines/shapes) -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"
-  />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
   <script>
-    // initialize the map
-    var map = L.map('map', {
-      center: [0, 0],    // placeholder coords
-      zoom: 2,
-      minZoom: 1
-    });
+    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 3, zoomControl: false });
+    L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // base map — blank grid only (no real tile source yet)
-    var gridLayer = L.gridLayer({
-      pane: 'tilePane',
-      attribution: '',
-      tileSize: 256,
-      updateWhenIdle: true
-    }).addTo(map);
+    // Grid Bounds
+    const goglandBounds = [[0, 0], [1000, 1000]];
+    
+    // Placeholder image - once the team gives you the file, replace this URL
+    L.imageOverlay('https://api.armasites.com/maps/gogland/topographic.jpg', goglandBounds).addTo(map);
+    map.fitBounds(goglandBounds);
 
-    // gridlines
-    gridLayer.createTile = function(coords) {
-      const tile = document.createElement('canvas');
-      tile.width = tile.height = 256;
-      const ctx = tile.getContext('2d');
-      ctx.strokeStyle = '#3a5a3f';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, 0); ctx.lineTo(256, 0);
-      ctx.moveTo(0, 0); ctx.lineTo(0, 256);
-      ctx.moveTo(256, 0); ctx.lineTo(256, 256);
-      ctx.moveTo(0, 256); ctx.lineTo(256, 256);
-      ctx.stroke();
-      return tile;
-    };
+    const drawnItems = new L.FeatureGroup().addTo(map);
 
-    // Drawing controls
-    var drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
-
-    var drawControl = new L.Control.Draw({
-      position: 'topright',
-      draw: {
-        circle: false,
-        rectangle: true,
-        polyline: true,
-        polygon: true,
-        marker: true,
-        circlemarker: true
-      },
-      edit: {
-        featureGroup: drawnItems
-      }
-    });
-    map.addControl(drawControl);
-
-    map.on(L.Draw.Event.CREATED, function (e) {
-      drawnItems.addLayer(e.layer);
-    });
-
-    // Example function to add custom marker icon
-    function addCustomMarker(lat, lng, label) {
-      var icon = L.icon({
-        iconUrl: 'https://placehold.co/32x32/8b2e2e/e0e0e0?text=U',
-        iconSize: [32, 32],
-        iconAnchor: [16, 32]
+    function spawnUnit(type, side) {
+      let color = (side === 'blue') ? '#2e5b8b' : (side === 'red') ? '#8b2e2e' : '#c6a84c';
+      let symbol = (type === 'infantry') ? 'X' : (type === 'armor') ? '○' : '★';
+      
+      const icon = L.divIcon({
+        className: 'custom-icon',
+        html: `<div style="border:2px solid ${color}; background:rgba(0,0,0,0.6); width:34px; height:24px; display:flex; align-items:center; justify-content:center; color:${color}; font-weight:bold; font-size:16px;">${symbol}</div>`,
+        iconSize: [34, 24]
       });
-      L.marker([lat, lng], { icon: icon })
-        .bindPopup(label)
-        .addTo(map);
+      
+      const marker = L.marker(map.getCenter(), {icon: icon, draggable: true}).addTo(drawnItems);
+      marker.bindPopup(`<b>${type.toUpperCase()}</b><br>Drag to reposition.`);
     }
+
+    function clearMap() { if(confirm("Confirm: Clear AO data?")) drawnItems.clearLayers(); }
   </script>
 </body>
 </html>
