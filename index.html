@@ -37,7 +37,7 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.6);
     }
     .brand { display: flex; align-items: center; gap: 12px; font-family: 'Quantico', sans-serif; font-size: 18px; color: var(--mil-gold); letter-spacing: 2px; }
-    .brand i { font-size: 24px; color: var(--text-main); }
+    .brand img { height: 32px; width: auto; border-radius: 4px; border: 1px solid var(--mil-gold); background: rgba(0,0,0,0.5); }
     .sys-status { font-family: 'Quantico', monospace; font-size: 12px; color: #4ade80; display: flex; align-items: center; gap: 8px; }
     .sys-status .pulse { width: 8px; height: 8px; background: #4ade80; border-radius: 50%; animation: blink 2s infinite; }
 
@@ -96,7 +96,7 @@
   <div class="dashboard">
     <header class="topbar">
       <div class="brand">
-        <i class="fas fa-shield-halved"></i> 
+        <img src="Reg Logo.webp" alt="The Regiment"> 
         <span>THE REGIMENT <span style="color:var(--text-main); font-weight:400;">| C2 DASHBOARD</span></span>
       </div>
       <div class="sys-status">
@@ -123,8 +123,10 @@
             <button class="btn-tactical" onclick="spawnUnit('arm', 'red')"><i class="fas fa-tank-water" style="color:var(--mil-red)"></i> ARMOR</button>
           </div>
 
-          <div class="section-title" style="margin-top: 20px;">Draw Tools</div>
-          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 20px;">Use the toolbar on the left side of the map to draw perimeters, routes, and tactical markers.</p>
+          <div class="section-title" style="margin-top: 20px;">Regiment Markers</div>
+          <button class="btn-tactical" style="width: 100%; flex-direction: row; gap: 15px;" onclick="spawnHQ()">
+            <img src="Reg Logo.webp" style="height: 24px; width: auto;"> DEPLOY HQ / RALLY POINT
+          </button>
 
           <div style="flex-grow: 1;"></div>
           <button class="btn-action btn-danger" onclick="clearMap()"><i class="fas fa-trash-can"></i> WIPE MISSION DATA</button>
@@ -162,21 +164,9 @@
     const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 3, zoomControl: false });
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // 2. Map Image Overlay (Stitching the halves together)
-    // We define the total grid as 1000x1000. 
+    // 2. Load the Single Complete Map
     const totalBounds = [[0, 0], [1000, 1000]];
-    
-    // Lower half goes from bottom (0) to middle (500)
-    const lowerBounds = [[0, 0], [500, 1000]];
-    
-    // Upper half goes from middle (500) to top (1000)
-    const upperBounds = [[500, 0], [1000, 1000]];
-
-    // Load the images directly from your GitHub repo using the exact filenames you uploaded
-    L.imageOverlay('Gogland Lower.png', lowerBounds).addTo(map);
-    L.imageOverlay('Gogland Upper.png', upperBounds).addTo(map);
-
-    // Snap the camera to the full stitched map
+    L.imageOverlay('Gogland Complete.png', totalBounds).addTo(map);
     map.fitBounds(totalBounds);
 
     // 3. Tactical Drawing Layer
@@ -214,14 +204,30 @@
       marker.on('contextmenu', function() { drawnItems.removeLayer(marker); });
     }
 
-    // 5. Grid Coordinate Tracker
+    // 5. Spawn Regiment HQ Logo Marker
+    function spawnHQ() {
+      const icon = L.divIcon({
+        className: 'custom-hq',
+        html: `<div style="background: rgba(10,22,12,0.9); border: 2px solid var(--mil-gold); padding: 4px; border-radius: 4px; box-shadow: 0 0 15px rgba(198,168,76,0.6);">
+                 <img src="Reg Logo.webp" style="width: 32px; height: 32px; display: block;">
+               </div>`,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
+      });
+      
+      const marker = L.marker(map.getCenter(), {icon: icon, draggable: true}).addTo(drawnItems);
+      marker.bindPopup(`<b style="color:var(--mil-gold); font-family:'Quantico';">REGIMENT HQ</b><br>Drag to move. Right-click to remove.`);
+      marker.on('contextmenu', function() { drawnItems.removeLayer(marker); });
+    }
+
+    // 6. Grid Coordinate Tracker
     map.on('mousemove', (e) => {
       let x = Math.max(0, Math.round(e.latlng.lng)).toString().padStart(4, '0');
       let y = Math.max(0, Math.round(e.latlng.lat)).toString().padStart(4, '0');
       document.getElementById('coords').innerHTML = `GRID REF: ${x} / ${y}`;
     });
 
-    // 6. UI Functions
+    // 7. UI Functions
     function addStep() {
       const input = document.getElementById('step-input');
       if (!input.value.trim()) return;
