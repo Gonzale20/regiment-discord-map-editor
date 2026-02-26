@@ -13,80 +13,105 @@
 
   <style>
     :root {
-      --mil-dark: #0a0e0b;
-      --mil-panel: #121c15;
-      --mil-border: #1e3822;
+      --mil-dark: #050806;
+      --mil-panel: #0d150f;
+      --mil-border: #233f27;
       --mil-gold: #c6a84c;
-      --mil-gold-hover: #d4b85a;
-      --mil-red: #8b2e2e;
-      --mil-blue: #4a7ab5;
+      --mil-gold-dim: rgba(198, 168, 76, 0.15);
+      --mil-blue: #3b82f6; /* High-vis tactical blue */
+      --mil-blue-bg: rgba(30, 58, 138, 0.9);
+      --mil-red: #ef4444; /* High-vis tactical red */
+      --mil-red-bg: rgba(127, 29, 29, 0.9);
       --text-main: #f3f4f6;
       --text-muted: #9ca3af;
-      --radius: 12px;
-      --shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+      --radius: 8px;
     }
 
     * { box-sizing: border-box; }
-    body, html { 
-      margin: 0; padding: 0; width: 100%; height: 100vh; 
-      background: var(--mil-dark); font-family: 'Inter', sans-serif; 
-      color: var(--text-main); overflow: hidden; 
-    }
+    body, html { margin: 0; padding: 0; width: 100%; height: 100vh; background: var(--mil-dark); font-family: 'Inter', sans-serif; color: var(--text-main); overflow: hidden; }
 
     /* --- Top Navigation --- */
     .topbar {
-      height: 70px; background: var(--mil-panel); border-bottom: 1px solid var(--mil-border);
-      display: flex; justify-content: space-between; align-items: center; padding: 0 30px;
+      height: 60px; background: var(--mil-panel); border-bottom: 1px solid var(--mil-border);
+      display: flex; justify-content: space-between; align-items: center; padding: 0 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.8); z-index: 2000; position: relative;
     }
     .brand { display: flex; align-items: center; gap: 15px; }
-    .brand img { height: 40px; border-radius: 6px; box-shadow: 0 0 10px rgba(198,168,76,0.2); }
-    .brand-text h1 { margin: 0; font-family: 'Quantico', sans-serif; font-size: 22px; color: var(--mil-gold); text-transform: uppercase; letter-spacing: 2px;}
-    .brand-text p { margin: 0; font-size: 12px; color: var(--text-muted); letter-spacing: 1px; }
-    
-    .sys-controls { display: flex; gap: 15px; }
-    .btn-outline { background: transparent; border: 1px solid var(--mil-gold); color: var(--mil-gold); padding: 8px 16px; border-radius: 4px; font-family: 'Quantico'; cursor: pointer; transition: 0.2s; }
+    .brand img { height: 36px; border-radius: 4px; box-shadow: 0 0 10px rgba(198,168,76,0.3); }
+    .brand-text h1 { margin: 0; font-family: 'Quantico', sans-serif; font-size: 20px; color: var(--mil-gold); text-transform: uppercase; letter-spacing: 2px;}
+    .sys-controls { display: flex; gap: 10px; }
+    .btn-outline { background: transparent; border: 1px solid var(--mil-gold); color: var(--mil-gold); padding: 6px 14px; border-radius: 4px; font-family: 'Quantico'; font-size: 13px; cursor: pointer; transition: 0.2s; }
     .btn-outline:hover { background: var(--mil-gold); color: var(--mil-dark); }
 
     /* --- Main Workspace --- */
-    .workspace { display: grid; grid-template-columns: 320px 1fr 350px; height: calc(100vh - 70px); gap: 20px; padding: 20px; }
+    .workspace { display: grid; grid-template-columns: 300px 1fr 320px; height: calc(100vh - 60px); gap: 15px; padding: 15px; }
 
     /* --- Panels --- */
-    .panel { background: var(--mil-panel); border-radius: var(--radius); border: 1px solid var(--mil-border); display: flex; flex-direction: column; box-shadow: var(--shadow); overflow: hidden; }
-    .panel-header { padding: 15px 20px; border-bottom: 1px solid var(--mil-border); font-family: 'Quantico'; color: var(--mil-gold); font-size: 14px; background: rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px; }
-    .panel-content { padding: 20px; overflow-y: auto; flex: 1; }
-    .section-title { font-size: 11px; color: var(--text-muted); font-family: 'Quantico'; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--mil-border); padding-bottom: 5px; }
+    .panel { background: var(--mil-panel); border-radius: var(--radius); border: 1px solid var(--mil-border); display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
+    .panel-header { padding: 12px 15px; border-bottom: 1px solid var(--mil-border); font-family: 'Quantico'; color: var(--mil-gold); font-size: 13px; background: rgba(0,0,0,0.4); display: flex; align-items: center; gap: 10px; }
+    .panel-content { padding: 15px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; }
+    
+    .section-title { font-size: 11px; color: var(--text-muted); font-family: 'Quantico'; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--mil-border); padding-bottom: 4px; margin-top: 15px; }
+    .section-title:first-child { margin-top: 0; }
 
-    /* --- Tactical Assets --- */
-    .asset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
+    /* --- Tactical Assets (3-Column Compact Grid) --- */
+    .asset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
     .asset-btn { 
       background: rgba(255,255,255,0.03); border: 1px solid var(--mil-border); color: var(--text-main);
-      padding: 12px; border-radius: 6px; cursor: pointer; text-align: center; transition: 0.2s;
-      display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; font-weight: 500;
+      padding: 10px 5px; border-radius: 4px; cursor: pointer; text-align: center; transition: 0.2s;
+      display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 10px; font-weight: 600; text-transform: uppercase;
     }
-    .asset-btn i { font-size: 20px; }
-    .asset-btn:hover { border-color: var(--mil-gold); background: rgba(198, 168, 76, 0.1); }
+    .asset-btn i { font-size: 16px; }
+    
+    /* Hover Colors based on parent section */
+    .blufor-grid .asset-btn:hover { border-color: var(--mil-blue); background: rgba(59, 130, 246, 0.1); color: var(--mil-blue); }
+    .opfor-grid .asset-btn:hover { border-color: var(--mil-red); background: rgba(239, 68, 68, 0.1); color: var(--mil-red); }
 
     /* --- Map Area --- */
-    .map-wrapper { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--mil-border); box-shadow: var(--shadow); position: relative; }
-    #map { width: 100%; height: 100%; background: #050a06; }
-    .hud-coords { position: absolute; bottom: 20px; right: 20px; background: rgba(10, 22, 12, 0.9); border: 1px solid var(--mil-gold); padding: 8px 16px; font-family: 'Quantico'; color: var(--mil-gold); z-index: 1000; border-radius: 4px; pointer-events: none; }
+    .map-wrapper { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--mil-border); position: relative; background: #000; }
+    #map { width: 100%; height: 100%; }
+    .hud-coords { position: absolute; bottom: 15px; right: 15px; background: rgba(10, 22, 12, 0.95); border: 1px solid var(--mil-gold); padding: 6px 12px; font-family: 'Quantico'; color: var(--mil-gold); font-size: 13px; z-index: 1000; border-radius: 4px; pointer-events: none; }
+
+    /* --- Tabbed Interface --- */
+    .tabs { display: flex; border-bottom: 1px solid var(--mil-border); background: rgba(0,0,0,0.3); }
+    .tab-btn { flex: 1; background: transparent; border: none; padding: 12px; color: var(--text-muted); font-family: 'Quantico'; font-size: 12px; cursor: pointer; transition: 0.2s; outline: none; }
+    .tab-btn.active { color: var(--mil-gold); border-bottom: 2px solid var(--mil-gold); background: rgba(198,168,76,0.1); }
+    .tab-pane { display: none; flex: 1; flex-direction: column; }
+    .tab-pane.active { display: flex; }
 
     /* --- Mission Ledger --- */
-    .step-input-group { display: flex; gap: 8px; margin-bottom: 20px; }
-    .step-input { flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--mil-border); color: white; padding: 10px; border-radius: 4px; outline: none; font-family: 'Inter'; }
+    .step-input-group { display: flex; gap: 6px; margin-bottom: 15px; }
+    .step-input { flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--mil-border); color: white; padding: 8px 10px; border-radius: 4px; outline: none; font-family: 'Inter'; font-size: 13px; }
     .step-input:focus { border-color: var(--mil-gold); }
-    .btn-add { background: var(--mil-gold); border: none; color: var(--mil-dark); padding: 0 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-add { background: var(--mil-gold); border: none; color: var(--mil-dark); padding: 0 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
-    .step-list { display: flex; flex-direction: column; gap: 10px; }
-    .step-item { background: rgba(255,255,255,0.03); border: 1px solid var(--mil-border); padding: 12px; border-radius: 6px; font-size: 13px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-    .step-text { flex: 1; line-height: 1.4; }
-    .step-num { color: var(--mil-gold); font-family: 'Quantico'; font-weight: bold; }
-    .btn-pin { background: transparent; border: 1px dashed var(--text-muted); color: var(--text-muted); border-radius: 4px; padding: 5px; cursor: pointer; transition: 0.2s; font-size: 12px; }
-    .btn-pin:hover { color: var(--mil-gold); border-color: var(--mil-gold); background: rgba(198,168,76,0.1); }
+    .step-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; padding-right: 5px; }
+    .step-item { background: rgba(255,255,255,0.03); border: 1px solid var(--mil-border); padding: 10px; border-radius: 4px; font-size: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .step-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .step-num { color: var(--mil-gold); font-family: 'Quantico'; font-weight: bold; margin-right: 8px; }
+    .step-text { flex: 1; line-height: 1.4; color: #ddd; }
+    
+    .step-actions { display: flex; gap: 6px; align-self: flex-end; }
+    .btn-action-small { background: transparent; border: 1px solid; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 11px; font-family: 'Quantico'; }
+    .btn-pin { color: var(--mil-gold); border-color: var(--mil-gold); }
+    .btn-pin:hover { background: var(--mil-gold); color: var(--mil-dark); }
+    .btn-del { color: var(--mil-red); border-color: var(--mil-red); }
+    .btn-del:hover { background: var(--mil-red); color: white; }
 
-    /* Custom Map Markers */
-    .marker-tactical { display: flex; align-items: center; justify-content: center; border: 2px solid; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); border-radius: 4px; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-    .marker-step { background: var(--mil-gold); color: var(--mil-dark); font-family: 'Quantico'; font-weight: bold; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+    /* Notes Area */
+    .notes-area { flex: 1; width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--mil-border); color: var(--mil-gold); padding: 15px; border-radius: 4px; resize: none; outline: none; font-family: 'Inter'; font-size: 13px; line-height: 1.6; }
+    .notes-area:focus { border-color: var(--mil-gold); }
+
+    /* Custom Map Markers (High Vis) */
+    .marker-tactical { display: flex; align-items: center; justify-content: center; border: 2px solid white; border-radius: 4px; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.8); font-size: 18px; }
+    .marker-blue { background: var(--mil-blue-bg); border-color: var(--mil-blue); }
+    .marker-red { background: var(--mil-red-bg); border-color: var(--mil-red); }
+    .marker-step { background: var(--mil-gold); color: var(--mil-dark); font-family: 'Quantico'; font-weight: bold; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.8); font-size: 14px; }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+    ::-webkit-scrollbar-thumb { background: var(--mil-border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--mil-gold); }
   </style>
 </head>
 <body>
@@ -94,46 +119,47 @@
   <header class="topbar">
     <div class="brand">
       <img src="Reg Logo.webp" alt="The Regiment">
-      <div class="brand-text">
-        <h1>Command & Control</h1>
-        <p>GLOBAL FOOTPRINT // TACTICAL DASHBOARD</p>
-      </div>
+      <div class="brand-text"><h1>Command & Control</h1></div>
     </div>
     <div class="sys-controls">
-      <button class="btn-outline" onclick="shareMission()"><i class="fas fa-share-nodes"></i> SHARE INTEL</button>
-      <button class="btn-outline" style="border-color: var(--mil-red); color: var(--mil-red);" onclick="clearMap()"><i class="fas fa-power-off"></i> PURGE</button>
+      <button class="btn-outline" onclick="shareMission()"><i class="fas fa-share-nodes"></i> EXPORT PLAN</button>
+      <button class="btn-outline" style="border-color: var(--mil-red); color: var(--mil-red);" onclick="clearMap()"><i class="fas fa-trash-can"></i> PURGE</button>
     </div>
   </header>
 
   <main class="workspace">
     
     <aside class="panel">
-      <div class="panel-header"><i class="fas fa-crosshairs"></i> ASSET DEPLOYMENT</div>
-      <div class="panel-content">
+      <div class="panel-header"><i class="fas fa-crosshairs"></i> ASSET ARMORY</div>
+      <div class="panel-content" style="padding: 10px 15px;">
         
-        <div class="section-title">BLUFOR (Friendly)</div>
-        <div class="asset-grid">
-          <button class="asset-btn" onclick="spawnUnit('infantry', 'blue')"><i class="fas fa-users" style="color:var(--mil-blue)"></i> Troops</button>
-          <button class="asset-btn" onclick="spawnUnit('armor', 'blue')"><i class="fas fa-tank-water" style="color:var(--mil-blue)"></i> Armor</button>
-          <button class="asset-btn" onclick="spawnUnit('vehicle', 'blue')"><i class="fas fa-truck-pickup" style="color:var(--mil-blue)"></i> Light Veh</button>
-          <button class="asset-btn" onclick="spawnUnit('air', 'blue')"><i class="fas fa-helicopter" style="color:var(--mil-blue)"></i> Aviation</button>
+        <div class="section-title">BLUFOR</div>
+        <div class="asset-grid blufor-grid">
+          <button class="asset-btn" onclick="spawnUnit('infantry', 'blue')"><i class="fas fa-users"></i> Inf</button>
+          <button class="asset-btn" onclick="spawnUnit('armor', 'blue')"><i class="fas fa-shield-halved"></i> Armor</button>
+          <button class="asset-btn" onclick="spawnUnit('transport', 'blue')"><i class="fas fa-truck"></i> Trans</button>
+          <button class="asset-btn" onclick="spawnUnit('air', 'blue')"><i class="fas fa-helicopter"></i> Air</button>
+          <button class="asset-btn" onclick="spawnUnit('sea', 'blue')"><i class="fas fa-ship"></i> Sea</button>
+          <button class="asset-btn" onclick="spawnUnit('recon', 'blue')"><i class="fas fa-eye"></i> Recon</button>
+          <button class="asset-btn" onclick="spawnUnit('sniper', 'blue')"><i class="fas fa-crosshairs"></i> Sniper</button>
+          <button class="asset-btn" onclick="spawnUnit('artillery', 'blue')"><i class="fas fa-rocket"></i> Arty</button>
+          <button class="asset-btn" onclick="spawnUnit('medic', 'blue')"><i class="fas fa-briefcase-medical"></i> Medic</button>
         </div>
 
-        <div class="section-title">OPFOR (Hostile)</div>
-        <div class="asset-grid">
-          <button class="asset-btn" onclick="spawnUnit('infantry', 'red')"><i class="fas fa-users" style="color:var(--mil-red)"></i> Troops</button>
-          <button class="asset-btn" onclick="spawnUnit('armor', 'red')"><i class="fas fa-tank-water" style="color:var(--mil-red)"></i> Armor</button>
-          <button class="asset-btn" onclick="spawnUnit('vehicle', 'red')"><i class="fas fa-truck-pickup" style="color:var(--mil-red)"></i> Transport</button>
+        <div class="section-title">OPFOR</div>
+        <div class="asset-grid opfor-grid">
+          <button class="asset-btn" onclick="spawnUnit('infantry', 'red')"><i class="fas fa-users"></i> Inf</button>
+          <button class="asset-btn" onclick="spawnUnit('armor', 'red')"><i class="fas fa-shield-halved"></i> Armor</button>
+          <button class="asset-btn" onclick="spawnUnit('transport', 'red')"><i class="fas fa-truck"></i> Trans</button>
+          <button class="asset-btn" onclick="spawnUnit('air', 'red')"><i class="fas fa-helicopter"></i> Air</button>
+          <button class="asset-btn" onclick="spawnUnit('recon', 'red')"><i class="fas fa-eye"></i> Recon</button>
+          <button class="asset-btn" onclick="spawnUnit('sniper', 'red')"><i class="fas fa-crosshairs"></i> Sniper</button>
         </div>
 
-        <div class="section-title">Regiment Command</div>
-        <button class="asset-btn" style="width: 100%; flex-direction: row; justify-content: center; gap: 15px;" onclick="spawnHQ()">
-          <img src="Reg Logo.webp" style="height: 24px; border-radius: 4px;"> ESTABLISH HQ
+        <div class="section-title">REGIMENT COMMAND</div>
+        <button class="asset-btn" style="width: 100%; flex-direction: row; justify-content: center; gap: 10px; padding: 12px; border-color: var(--mil-gold);" onclick="spawnHQ()">
+          <img src="Reg Logo.webp" style="height: 20px; border-radius: 4px;"> ESTABLISH HQ
         </button>
-
-        <p style="font-size: 11px; color: var(--text-muted); margin-top: 20px; line-height: 1.5;">
-          <i class="fas fa-info-circle"></i> <b>DRAWING TOOLS:</b> Use the toolbar on the left side of the map to draw routes. Select the "Edit" (pencil) icon to stretch, move, or bend arrows and lines dynamically.
-        </p>
       </div>
     </aside>
 
@@ -143,19 +169,23 @@
     </div>
 
     <aside class="panel">
-      <div class="panel-header"><i class="fas fa-clipboard-list"></i> MISSION LEDGER</div>
-      <div class="panel-content">
-        
-        <div class="section-title">OPERATIONAL INSTRUCTIONS</div>
-        
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('tab-exec', this)">EXECUTION</button>
+        <button class="tab-btn" onclick="switchTab('tab-intel', this)">INTEL / NOTES</button>
+      </div>
+
+      <div id="tab-exec" class="panel-content tab-pane active">
         <div class="step-input-group">
-          <input type="text" id="step-input" class="step-input" placeholder="Enter objective...">
-          <button class="btn-add" onclick="addStep()"><i class="fas fa-plus"></i></button>
+          <input type="text" id="step-input" class="step-input" placeholder="Type instruction & press Enter...">
+          <button class="btn-add" onclick="processAddStep()"><i class="fas fa-plus"></i></button>
         </div>
-
         <div class="step-list" id="step-list">
-          </div>
+          <div style="color: var(--text-muted); font-size: 12px; text-align: center; margin-top: 20px; font-style: italic;">No operational steps logged.</div>
+        </div>
+      </div>
 
+      <div id="tab-intel" class="panel-content tab-pane">
+        <textarea class="notes-area" placeholder="Log enemy movements, specific comms channels, commander's intent, or operational parameters here..."></textarea>
       </div>
     </aside>
 
@@ -165,46 +195,57 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
   <script>
-    // 1. Initialize Map
-    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 3, zoomControl: false });
-    L.control.zoom({ position: 'topright' }).addTo(map);
-
-    // Load Gogland Map
+    // 1. BOUNDED MAP INITIALIZATION
     const bounds = [[0, 0], [1000, 1000]];
+    const map = L.map('map', { 
+      crs: L.CRS.Simple, 
+      minZoom: -2, 
+      maxZoom: 3, 
+      zoomControl: false,
+      maxBounds: bounds,            // Restricts panning
+      maxBoundsViscosity: 1.0       // Bounces back hard if user tries to drag off map
+    });
+    
+    L.control.zoom({ position: 'topright' }).addTo(map);
     L.imageOverlay('Gogland Complete.png', bounds).addTo(map);
     map.fitBounds(bounds);
 
-    // 2. Tactical Layer & Draw Controls
+    // 2. TACTICAL LAYER & DRAW CONTROLS
     const drawnItems = new L.FeatureGroup().addTo(map);
 
     new L.Control.Draw({
       position: 'topleft',
-      edit: { featureGroup: drawnItems }, // This allows lines/shapes to be stretched and moved
+      edit: { featureGroup: drawnItems },
       draw: {
         circle: false, marker: false, circlemarker: false,
-        polyline: { shapeOptions: { color: '#c6a84c', weight: 4, dashArray: '5, 10' } }, // Dashed route lines
+        polyline: { shapeOptions: { color: '#c6a84c', weight: 4, opacity: 0.9 } },
         polygon: { shapeOptions: { color: '#c6a84c', fillOpacity: 0.2, weight: 2 } },
-        rectangle: { shapeOptions: { color: '#8b2e2e', fillOpacity: 0.15, weight: 2 } } // Red killzones
+        rectangle: { shapeOptions: { color: '#ef4444', fillOpacity: 0.15, weight: 2 } } 
       }
     }).addTo(map);
 
     map.on(L.Draw.Event.CREATED, (e) => drawnItems.addLayer(e.layer));
 
-    // 3. Expanded Asset Spawner
+    // 3. HIGH-VIS ASSET SPAWNER
     function spawnUnit(type, side) {
-      const color = (side === 'blue') ? 'var(--mil-blue)' : 'var(--mil-red)';
+      const colorClass = (side === 'blue') ? 'marker-blue' : 'marker-red';
       
       const icons = {
         'infantry': '<i class="fas fa-users"></i>',
-        'armor': '<i class="fas fa-tank-water"></i>',
-        'vehicle': '<i class="fas fa-truck-pickup"></i>',
-        'air': '<i class="fas fa-helicopter"></i>'
+        'armor': '<i class="fas fa-shield-halved"></i>',
+        'transport': '<i class="fas fa-truck"></i>',
+        'air': '<i class="fas fa-helicopter"></i>',
+        'sea': '<i class="fas fa-ship"></i>',
+        'recon': '<i class="fas fa-eye"></i>',
+        'sniper': '<i class="fas fa-crosshairs"></i>',
+        'artillery': '<i class="fas fa-rocket"></i>',
+        'medic': '<i class="fas fa-briefcase-medical"></i>'
       };
       
       const icon = L.divIcon({
-        className: 'marker-tactical',
-        html: `<div style="border-color: ${color}; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">${icons[type]}</div>`,
-        iconSize: [36, 36]
+        className: `marker-tactical ${colorClass}`,
+        html: icons[type],
+        iconSize: [34, 34]
       });
       
       const marker = L.marker(map.getCenter(), {icon: icon, draggable: true}).addTo(drawnItems);
@@ -215,86 +256,137 @@
     function spawnHQ() {
       const icon = L.divIcon({
         className: '',
-        html: `<div style="background: rgba(0,0,0,0.8); border: 2px solid var(--mil-gold); border-radius: 8px; padding: 4px;"><img src="Reg Logo.webp" style="width: 32px; height: 32px; display: block;"></div>`,
+        html: `<div style="background: rgba(0,0,0,0.9); border: 2px solid var(--mil-gold); border-radius: 6px; padding: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.8);"><img src="Reg Logo.webp" style="width: 32px; height: 32px; display: block;"></div>`,
         iconSize: [44, 44]
       });
       const marker = L.marker(map.getCenter(), {icon: icon, draggable: true}).addTo(drawnItems);
-      marker.bindPopup(`<b>REGIMENT HQ</b>`);
+      marker.bindPopup(`<b>REGIMENT HQ</b><br>Right-click to remove.`);
       marker.on('contextmenu', () => drawnItems.removeLayer(marker));
     }
 
-    // 4. Draggable Mission Steps
-    let stepCount = 0;
-    const stepsData = [];
+    // 4. MISSION LEDGER (ADD, PIN, DELETE)
+    let stepCounter = 0;
+    let stepsArray = []; // Stores { id, text, leafletMarker }
 
-    function addStep() {
+    function switchTab(tabId, btnElement) {
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btnElement.classList.add('active');
+    }
+
+    function processAddStep() {
       const input = document.getElementById('step-input');
       const text = input.value.trim();
       if (!text) return;
       
-      stepCount++;
-      stepsData.push({ num: stepCount, instruction: text });
-      
-      const list = document.getElementById('step-list');
-      const div = document.createElement('div');
-      div.className = 'step-item';
-      div.innerHTML = `
-        <div style="display: flex; gap: 10px;">
-          <span class="step-num">${stepCount}.</span>
-          <span class="step-text">${text}</span>
-        </div>
-        <button class="btn-pin" onclick="pinStepToMap(${stepCount})" title="Drop Pin on Map"><i class="fas fa-map-pin"></i></button>
-      `;
-      
-      list.appendChild(div);
+      stepCounter++;
+      const stepObj = { id: stepCounter, text: text, marker: null };
+      stepsArray.push(stepObj);
       input.value = "";
+      renderSteps();
     }
 
-    // Pin a specific step to the map
-    window.pinStepToMap = function(num) {
+    document.getElementById('step-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') processAddStep();
+    });
+
+    function renderSteps() {
+      const list = document.getElementById('step-list');
+      list.innerHTML = '';
+      
+      if(stepsArray.length === 0) {
+        list.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; text-align: center; margin-top: 20px; font-style: italic;">No operational steps logged.</div>';
+        return;
+      }
+
+      stepsArray.forEach((step, index) => {
+        const visualNum = index + 1; // Recalculate display number so it's always 1, 2, 3 even if deleted
+        
+        const div = document.createElement('div');
+        div.className = 'step-item';
+        div.innerHTML = `
+          <div class="step-header">
+            <span class="step-num">${visualNum}.</span>
+            <span class="step-text">${step.text}</span>
+          </div>
+          <div class="step-actions">
+            <button class="btn-action-small btn-pin" onclick="pinStep(${step.id}, ${visualNum})" title="Drop Pin on Map"><i class="fas fa-map-pin"></i> Pin to Map</button>
+            <button class="btn-action-small btn-del" onclick="deleteStep(${step.id})" title="Delete Step"><i class="fas fa-trash"></i> Delete</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    window.pinStep = function(id, visualNum) {
+      const step = stepsArray.find(s => s.id === id);
+      if (!step) return;
+
+      // If marker already exists, just open its popup
+      if (step.marker) {
+        step.marker.openPopup();
+        return;
+      }
+
+      // Create new numbered pin
       const icon = L.divIcon({
         className: 'marker-step',
-        html: `<div style="width: 24px; height: 24px;">${num}</div>`,
+        html: `<div style="width: 20px; height: 20px; line-height:20px; text-align:center;">${visualNum}</div>`,
         iconSize: [28, 28]
       });
       
       const marker = L.marker(map.getCenter(), {icon: icon, draggable: true}).addTo(drawnItems);
-      const stepText = stepsData.find(s => s.num === num).instruction;
-      marker.bindPopup(`<b>STEP ${num}:</b><br>${stepText}`);
-      marker.on('contextmenu', () => drawnItems.removeLayer(marker));
+      marker.bindPopup(`<b>STEP ${visualNum}:</b><br>${step.text}`);
+      marker.on('contextmenu', () => {
+        drawnItems.removeLayer(marker);
+        step.marker = null; // Unlink if manually removed
+      });
+      
+      step.marker = marker;
+      marker.openPopup();
     }
 
-    document.getElementById('step-input').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') addStep();
-    });
+    window.deleteStep = function(id) {
+      const index = stepsArray.findIndex(s => s.id === id);
+      if (index > -1) {
+        // Remove marker from map if pinned
+        if (stepsArray[index].marker) {
+          drawnItems.removeLayer(stepsArray[index].marker);
+        }
+        // Remove from array and re-render
+        stepsArray.splice(index, 1);
+        renderSteps();
+      }
+    }
 
-    // 5. Grid Tracker
+    // 5. GRID & UTILITIES
     map.on('mousemove', (e) => {
-      let x = Math.max(0, Math.round(e.latlng.lng)).toString().padStart(4, '0');
-      let y = Math.max(0, Math.round(e.latlng.lat)).toString().padStart(4, '0');
+      let x = Math.max(0, Math.min(1000, Math.round(e.latlng.lng))).toString().padStart(4, '0');
+      let y = Math.max(0, Math.min(1000, Math.round(e.latlng.lat))).toString().padStart(4, '0');
       document.getElementById('coords').innerHTML = `GRID: ${x} / ${y}`;
     });
 
-    // 6. Share & Purge Data
     function shareMission() {
-      if (stepsData.length === 0) {
-        alert("No instructions logged. Add steps to the Mission Ledger before sharing.");
-        return;
-      }
+      if (stepsArray.length === 0) { alert("No instructions logged."); return; }
       let exportText = "=== THE REGIMENT: OP ORDER ===\n\n";
-      stepsData.forEach(s => { exportText += `[Phase ${s.num}] ${s.instruction}\n`; });
+      stepsArray.forEach((s, index) => { exportText += `[Phase ${index + 1}] ${s.text}\n`; });
       
+      const notes = document.querySelector('.notes-area').value.trim();
+      if (notes) exportText += `\n[COMMANDER'S INTEL]\n${notes}\n`;
+
       navigator.clipboard.writeText(exportText).then(() => {
-        alert("Mission Instructions copied to clipboard. Ready to paste into Discord.");
+        alert("Mission plan and Intel copied to clipboard!");
       });
     }
 
     function clearMap() {
-      if(confirm("CRITICAL: This will purge the map and delete all instructions. Proceed?")) {
+      if(confirm("CRITICAL: Purge map, steps, and intel?")) {
         drawnItems.clearLayers();
-        document.getElementById('step-list').innerHTML = '';
-        stepCount = 0;
-        stepsData.length = 0;
+        stepsArray = [];
+        stepCounter = 0;
+        document.querySelector('.notes-area').value = "";
+        renderSteps();
       }
     }
   </script>
