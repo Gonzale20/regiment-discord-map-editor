@@ -124,6 +124,9 @@
       <div class="brand-text"><h1>Command & Control</h1></div>
     </div>
     <div class="sys-controls">
+      <button class="btn-outline" onclick="savePlan()"><i class="fas fa-floppy-disk"></i> SAVE PLAN</button>
+      <button class="btn-outline" onclick="triggerLoadPlan()"><i class="fas fa-folder-open"></i> LOAD PLAN</button>
+      <input type="file" id="load-plan-input" accept=".json" style="display:none" onchange="handleLoadPlan(event)">
       <button class="btn-outline" onclick="shareMission()"><i class="fas fa-share-nodes"></i> EXPORT PLAN</button>
       <button class="btn-outline" style="border-color: var(--mil-red); color: var(--mil-red);" onclick="clearMap()"><i class="fas fa-trash-can"></i> PURGE</button>
     </div>
@@ -197,102 +200,113 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
   <script>
-    // 1. BOUNDED MAP INITIALIZATION WITH CAMERA LOCK
+    // 1. MAP INITIALIZATION
     const bounds = [[0, 0], [1000, 1000]];
-    const map = L.map('map', { 
-      crs: L.CRS.Simple, 
+    const map = L.map('map', {
+      crs: L.CRS.Simple,
       zoomControl: false,
-      maxBounds: bounds,            
-      maxBoundsViscosity: 1.0,      // Bounces back hard if dragged off map
-      bounceAtZoomLimits: false     
+      maxBounds: bounds,
+      maxBoundsViscosity: 1.0,
+      bounceAtZoomLimits: false
     });
-    
+
     L.control.zoom({ position: 'topright' }).addTo(map);
     L.imageOverlay('Gogland Complete.png', bounds).addTo(map);
 
-    // Dynamic Camera Lock to "COVER" the screen and eliminate the void
     function lockCamera() {
-      // 1. Unlock minimum zoom temporarily
       map.setMinZoom(-10);
-      
-      // 2. Calculate the exact zoom needed to COVER the entire container
-      const mapSize = map.getSize(); 
-      const boundsSize = map.project(bounds[1], 0).subtract(map.project(bounds[0], 0)); 
-      
-      const scaleX = mapSize.x / boundsSize.x;
-      const scaleY = mapSize.y / boundsSize.y;
-      
-      // Math.max forces the map to fill the empty space (Cover logic)
-      const scale = Math.max(scaleX, scaleY);
+      const mapSize = map.getSize();
+      const boundsSize = map.project(bounds[1], 0).subtract(map.project(bounds[0], 0));
+      const scale = Math.max(mapSize.x / boundsSize.x, mapSize.y / boundsSize.y);
       const targetZoom = map.getScaleZoom(scale, 0);
-      
-      // 3. Lock the zoom and center the map on the island
       map.setMinZoom(targetZoom);
-      map.setView([500, 500], targetZoom); 
+      map.setView([500, 500], targetZoom);
     }
 
-    // Run lock on startup and strictly recalculate upon window resize
     lockCamera();
     window.addEventListener('resize', lockCamera);
 
-    // 2. TACTICAL LAYER & DRAW CONTROLS
-    const drawnItems = new L.FeatureGroup().addTo(map);
+    // 2. STATE VARIABLES
+    const SAVE_KEY = 'regiment_c2_state';
+    let stepsArray = [];
+    let stepCounter = 0;
+    let unitsArray = [];
+    let undoStack = [];
+    let isLoading = false;
+    let notesSaveTimer;
 
+    // 3. LAYERS
+    const drawnItems = new L.FeatureGroup().addTo(map); // drawn shapes only
+    const unitLayer  = new L.FeatureGroup().addTo(map); // markers & step pins
+
+    // 4. DRAW CONTROLS
     new L.Control.Draw({
       position: 'topleft',
       edit: { featureGroup: drawnItems },
       draw: {
         circle: false, marker: false, circlemarker: false,
-        polyline: { shapeOptions: { color: '#c6a84c', weight: 4, opacity: 0.9 } },
-        polygon: { shapeOptions: { color: '#c6a84c', fillOpacity: 0.2, weight: 2 } },
-        rectangle: { shapeOptions: { color: '#ef4444', fillOpacity: 0.15, weight: 2 } } 
+        polyline:  { shapeOptions: { color: '#c6a84c', weight: 4,  opacity: 0.9 } },
+        polygon:   { shapeOptions: { color: '#c6a84c', fillOpacity: 0.2, weight: 2 } },
+        rectangle: { shapeOptions: { color: '#ef4444', fillOpacity: 0.15, weight: 2 } }
       }
     }).addTo(map);
 
-    map.on(L.Draw.Event.CREATED, (e) => drawnItems.addLayer(e.layer));
+    map.on(L.Draw.Event.CREATED, (e) => { drawnItems.addLayer(e.layer); saveState(); });
+    map.on(L.Draw.Event.EDITED,  saveState);
+    map.on(L.Draw.Event.DELETED, saveState);
 
-    // 3. HIGH-VIS ASSET SPAWNER
-    function spawnUnit(type, side) {
-      const colorClass = (side === 'blue') ? 'marker-blue' : 'marker-red';
-      
-      const icons = {
-        'infantry': '<i class="fas fa-users"></i>',
-        'armor': '<i class="fas fa-shield-halved"></i>',
-        'transport': '<i class="fas fa-truck"></i>',
-        'air': '<i class="fas fa-helicopter"></i>',
-        'sea': '<i class="fas fa-ship"></i>',
-        'recon': '<i class="fas fa-eye"></i>',
-        'sniper': '<i class="fas fa-crosshairs"></i>',
-        'artillery': '<i class="fas fa-rocket"></i>',
-        'medic': '<i class="fas fa-briefcase-medical"></i>'
-      };
-      
+    // 5. ASSET SPAWNER
+    const unitIcons = {
+      infantry:  '<i class="fas fa-users"></i>',
+      armor:     '<i class="fas fa-shield-halved"></i>',
+      transport: '<i class="fas fa-truck"></i>',
+      air:       '<i class="fas fa-helicopter"></i>',
+      sea:       '<i class="fas fa-ship"></i>',
+      recon:     '<i class="fas fa-eye"></i>',
+      sniper:    '<i class="fas fa-crosshairs"></i>',
+      artillery: '<i class="fas fa-rocket"></i>',
+      medic:     '<i class="fas fa-briefcase-medical"></i>'
+    };
+
+    function spawnUnit(type, side, position) {
       const icon = L.divIcon({
-        className: `marker-tactical ${colorClass}`,
-        html: icons[type],
+        className: `marker-tactical ${side === 'blue' ? 'marker-blue' : 'marker-red'}`,
+        html: unitIcons[type] || '',
         iconSize: [34, 34]
       });
-      
-      const marker = L.marker(map.getCenter(), {icon: icon, draggable: true}).addTo(drawnItems);
+      const marker = L.marker(position || map.getCenter(), { icon, draggable: true }).addTo(unitLayer);
       marker.bindPopup(`<b style="text-transform:uppercase;">${side} ${type}</b><br>Right-click to remove.`);
-      marker.on('contextmenu', () => drawnItems.removeLayer(marker));
+      marker.on('contextmenu', () => {
+        unitLayer.removeLayer(marker);
+        const idx = unitsArray.findIndex(u => u.marker === marker);
+        if (idx > -1) unitsArray.splice(idx, 1);
+        saveState();
+      });
+      marker.on('dragend', saveState);
+      unitsArray.push({ type, side, marker });
+      if (!position) saveState();
     }
 
-    function spawnHQ() {
+    function spawnHQ(position) {
       const icon = L.divIcon({
         className: '',
-        html: `<div style="background: rgba(0,0,0,0.9); border: 2px solid var(--mil-gold); border-radius: 6px; padding: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.8);"><img src="Reg Logo.webp" style="width: 32px; height: 32px; display: block;"></div>`,
+        html: `<div style="background:rgba(0,0,0,0.9);border:2px solid var(--mil-gold);border-radius:6px;padding:4px;box-shadow:0 4px 15px rgba(0,0,0,0.8);"><img src="Reg Logo.webp" style="width:32px;height:32px;display:block;"></div>`,
         iconSize: [44, 44]
       });
-      const marker = L.marker(map.getCenter(), {icon: icon, draggable: true}).addTo(drawnItems);
+      const marker = L.marker(position || map.getCenter(), { icon, draggable: true }).addTo(unitLayer);
       marker.bindPopup(`<b>REGIMENT HQ</b><br>Right-click to remove.`);
-      marker.on('contextmenu', () => drawnItems.removeLayer(marker));
+      marker.on('contextmenu', () => {
+        unitLayer.removeLayer(marker);
+        const idx = unitsArray.findIndex(u => u.marker === marker);
+        if (idx > -1) unitsArray.splice(idx, 1);
+        saveState();
+      });
+      marker.on('dragend', saveState);
+      unitsArray.push({ type: 'hq', side: 'neutral', marker });
+      if (!position) saveState();
     }
 
-    // 4. MISSION LEDGER (ADD, PIN, DELETE)
-    let stepCounter = 0;
-    let stepsArray = []; // Stores { id, text, leafletMarker }
-
+    // 6. MISSION LEDGER
     function switchTab(tabId, btnElement) {
       document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -304,12 +318,11 @@
       const input = document.getElementById('step-input');
       const text = input.value.trim();
       if (!text) return;
-      
       stepCounter++;
-      const stepObj = { id: stepCounter, text: text, marker: null };
-      stepsArray.push(stepObj);
-      input.value = "";
+      stepsArray.push({ id: stepCounter, text, marker: null });
+      input.value = '';
       renderSteps();
+      saveState();
     }
 
     document.getElementById('step-input').addEventListener('keypress', (e) => {
@@ -319,15 +332,24 @@
     function renderSteps() {
       const list = document.getElementById('step-list');
       list.innerHTML = '';
-      
-      if(stepsArray.length === 0) {
-        list.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; text-align: center; margin-top: 20px; font-style: italic;">No operational steps logged.</div>';
+
+      if (undoStack.length > 0) {
+        const bar = document.createElement('div');
+        bar.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:8px;';
+        bar.innerHTML = `<button class="btn-action-small btn-pin" onclick="undoDelete()"><i class="fas fa-rotate-left"></i> UNDO DELETE</button>`;
+        list.appendChild(bar);
+      }
+
+      if (stepsArray.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'color:var(--text-muted);font-size:12px;text-align:center;margin-top:20px;font-style:italic;';
+        empty.textContent = 'No operational steps logged.';
+        list.appendChild(empty);
         return;
       }
 
       stepsArray.forEach((step, index) => {
-        const visualNum = index + 1; // Recalculate display number so it's always sequential
-        
+        const visualNum = index + 1;
         const div = document.createElement('div');
         div.className = 'step-item';
         div.innerHTML = `
@@ -344,75 +366,227 @@
       });
     }
 
+    function makeStepPin(visualNum, text, position) {
+      const icon = L.divIcon({
+        className: 'marker-step',
+        html: `<div style="width:20px;height:20px;line-height:20px;text-align:center;">${visualNum}</div>`,
+        iconSize: [28, 28]
+      });
+      const marker = L.marker(position || map.getCenter(), { icon, draggable: true }).addTo(unitLayer);
+      marker.bindPopup(`<b>STEP ${visualNum}:</b><br>${text}`);
+      marker.on('dragend', saveState);
+      return marker;
+    }
+
     window.pinStep = function(id, visualNum) {
       const step = stepsArray.find(s => s.id === id);
       if (!step) return;
-
-      // If marker already exists, just open its popup
-      if (step.marker) {
-        step.marker.openPopup();
-        return;
-      }
-
-      // Create new numbered pin
-      const icon = L.divIcon({
-        className: 'marker-step',
-        html: `<div style="width: 20px; height: 20px; line-height:20px; text-align:center;">${visualNum}</div>`,
-        iconSize: [28, 28]
-      });
-      
-      const marker = L.marker(map.getCenter(), {icon: icon, draggable: true}).addTo(drawnItems);
-      marker.bindPopup(`<b>STEP ${visualNum}:</b><br>${step.text}`);
+      if (step.marker) { step.marker.openPopup(); return; }
+      const marker = makeStepPin(visualNum, step.text, null);
       marker.on('contextmenu', () => {
-        drawnItems.removeLayer(marker);
-        step.marker = null; // Unlink if manually removed
+        unitLayer.removeLayer(marker);
+        step.marker = null;
+        saveState();
       });
-      
       step.marker = marker;
       marker.openPopup();
-    }
+      saveState();
+    };
 
     window.deleteStep = function(id) {
       const index = stepsArray.findIndex(s => s.id === id);
-      if (index > -1) {
-        // Remove marker from map if pinned
-        if (stepsArray[index].marker) {
-          drawnItems.removeLayer(stepsArray[index].marker);
-        }
-        // Remove from array and re-render
-        stepsArray.splice(index, 1);
-        renderSteps();
+      if (index === -1) return;
+      const deleted = stepsArray[index];
+      undoStack.push({
+        step: { id: deleted.id, text: deleted.text },
+        pinLat: deleted.marker ? deleted.marker.getLatLng().lat : null,
+        pinLng: deleted.marker ? deleted.marker.getLatLng().lng : null,
+        insertIndex: index
+      });
+      if (undoStack.length > 5) undoStack.shift();
+      if (deleted.marker) unitLayer.removeLayer(deleted.marker);
+      stepsArray.splice(index, 1);
+      renderSteps();
+      saveState();
+    };
+
+    window.undoDelete = function() {
+      const entry = undoStack.pop();
+      if (!entry) return;
+      const stepObj = { id: entry.step.id, text: entry.step.text, marker: null };
+      const insertAt = Math.min(entry.insertIndex, stepsArray.length);
+      stepsArray.splice(insertAt, 0, stepObj);
+      if (entry.pinLat !== null) {
+        const visualNum = insertAt + 1;
+        const marker = makeStepPin(visualNum, entry.step.text, [entry.pinLat, entry.pinLng]);
+        marker.on('contextmenu', () => {
+          unitLayer.removeLayer(marker);
+          stepObj.marker = null;
+          saveState();
+        });
+        stepObj.marker = marker;
+      }
+      renderSteps();
+      saveState();
+    };
+
+    // 7. PERSISTENCE
+    function saveState() {
+      if (isLoading) return;
+      try {
+        const shapes = [];
+        drawnItems.eachLayer(layer => {
+          const feature = layer.toGeoJSON();
+          feature.properties._style = {
+            color: layer.options.color,
+            weight: layer.options.weight,
+            opacity: layer.options.opacity,
+            fill: layer.options.fill,
+            fillColor: layer.options.fillColor,
+            fillOpacity: layer.options.fillOpacity
+          };
+          shapes.push(feature);
+        });
+
+        const state = {
+          version: 1,
+          units: unitsArray.map(u => ({
+            type: u.type, side: u.side,
+            lat: u.marker.getLatLng().lat,
+            lng: u.marker.getLatLng().lng
+          })),
+          steps: stepsArray.map(s => ({
+            id: s.id, text: s.text,
+            pinLat: s.marker ? s.marker.getLatLng().lat : null,
+            pinLng: s.marker ? s.marker.getLatLng().lng : null
+          })),
+          stepCounter,
+          notes: document.querySelector('.notes-area').value,
+          shapes: { type: 'FeatureCollection', features: shapes }
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      } catch(e) {
+        console.warn('Auto-save failed:', e);
       }
     }
 
-    // 5. GRID & UTILITIES
+    function loadState(state) {
+      isLoading = true;
+      try {
+        drawnItems.clearLayers();
+        unitLayer.clearLayers();
+        unitsArray = [];
+        stepsArray = [];
+        stepCounter = state.stepCounter || 0;
+
+        (state.units || []).forEach(u => {
+          if (u.type === 'hq') spawnHQ([u.lat, u.lng]);
+          else spawnUnit(u.type, u.side, [u.lat, u.lng]);
+        });
+
+        (state.steps || []).forEach((s, index) => {
+          const stepObj = { id: s.id, text: s.text, marker: null };
+          stepsArray.push(stepObj);
+          if (s.pinLat !== null && s.pinLat !== undefined) {
+            const marker = makeStepPin(index + 1, s.text, [s.pinLat, s.pinLng]);
+            marker.on('contextmenu', () => {
+              unitLayer.removeLayer(marker);
+              stepObj.marker = null;
+              saveState();
+            });
+            stepObj.marker = marker;
+          }
+        });
+
+        document.querySelector('.notes-area').value = state.notes || '';
+
+        (state.shapes && state.shapes.features || []).forEach(feature => {
+          const style = (feature.properties && feature.properties._style) || {};
+          L.geoJSON(feature, { style: () => style }).eachLayer(l => drawnItems.addLayer(l));
+        });
+
+        renderSteps();
+      } finally {
+        isLoading = false;
+      }
+    }
+
+    function savePlan() {
+      saveState();
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) { alert('Nothing to save.'); return; }
+      const blob = new Blob([raw], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `regiment-op-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function triggerLoadPlan() {
+      document.getElementById('load-plan-input').click();
+    }
+
+    function handleLoadPlan(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const state = JSON.parse(e.target.result);
+          if (!state.version) throw new Error('Invalid file format');
+          if (confirm('Load this plan? Current map will be replaced.')) {
+            loadState(state);
+            localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+          }
+        } catch(err) {
+          alert('Failed to load plan: ' + err.message);
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    // 8. GRID & UTILITIES
     map.on('mousemove', (e) => {
-      let x = Math.max(0, Math.min(1000, Math.round(e.latlng.lng))).toString().padStart(4, '0');
-      let y = Math.max(0, Math.min(1000, Math.round(e.latlng.lat))).toString().padStart(4, '0');
+      const x = Math.max(0, Math.min(1000, Math.round(e.latlng.lng))).toString().padStart(4, '0');
+      const y = Math.max(0, Math.min(1000, Math.round(e.latlng.lat))).toString().padStart(4, '0');
       document.getElementById('coords').innerHTML = `GRID: ${x} / ${y}`;
     });
 
+    document.querySelector('.notes-area').addEventListener('input', () => {
+      clearTimeout(notesSaveTimer);
+      notesSaveTimer = setTimeout(saveState, 1000);
+    });
+
     function shareMission() {
-      if (stepsArray.length === 0) { alert("No instructions logged."); return; }
-      let exportText = "=== THE REGIMENT: OP ORDER ===\n\n";
+      if (stepsArray.length === 0) { alert('No instructions logged.'); return; }
+      let exportText = '=== THE REGIMENT: OP ORDER ===\n\n';
       stepsArray.forEach((s, index) => { exportText += `[Phase ${index + 1}] ${s.text}\n`; });
-      
       const notes = document.querySelector('.notes-area').value.trim();
       if (notes) exportText += `\n[COMMANDER'S INTEL]\n${notes}\n`;
-
-      navigator.clipboard.writeText(exportText).then(() => {
-        alert("Mission plan and Intel copied to clipboard!");
-      });
+      navigator.clipboard.writeText(exportText).then(() => alert('Mission plan and Intel copied to clipboard!'));
     }
 
     function clearMap() {
-      if(confirm("CRITICAL: Purge map, steps, and intel?")) {
+      if (confirm('CRITICAL: Purge map, steps, and intel?')) {
         drawnItems.clearLayers();
+        unitLayer.clearLayers();
+        unitsArray = [];
         stepsArray = [];
+        undoStack = [];
         stepCounter = 0;
-        document.querySelector('.notes-area').value = "";
+        document.querySelector('.notes-area').value = '';
         renderSteps();
+        localStorage.removeItem(SAVE_KEY);
       }
+    }
+
+    // 9. AUTO-LOAD FROM LOCALSTORAGE
+    const savedRaw = localStorage.getItem(SAVE_KEY);
+    if (savedRaw) {
+      try { loadState(JSON.parse(savedRaw)); } catch(e) { console.warn('Failed to restore saved state:', e); }
     }
   </script>
 </body>
